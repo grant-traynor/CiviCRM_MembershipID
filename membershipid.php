@@ -77,8 +77,23 @@ function membershipid_civicrm_post( $op, $objectName, $objectId, &$objectRef )
 {
    if ($op == 'create' && $objectName == 'Membership') 
    {
-	/* Test first */
-	$file = '/tmp/gktTestMembershipPlugin.log';
-	file_put_contents( $file, "Got a membership change\n", FILE_APPEND );
+
+      /* get a reference to the contact referred to by this membership entry */
+      $contactRef = new CRM_Contact_DAO_Contact();
+      $contactRef->id = $objectRef.contact_id;
+
+      /* Check if this contact already has a membership id */
+      /* if not, then set it to the current maximum membership id + 1 */
+
+      /* Some debugging logic */
+      $file = '/tmp/gktTestMembershipPlugin.log';
+      $strOut = strtr("Performed @op at @time on @transType for contact ID @contactId\n", 
+                     array( '@op' => $op,
+                            '@time' => date('Y-m-d H:i:s'),
+                            '@transType' => $objectname,
+                            '@contactId' => $objectRef.contact_id,)
+                     );
+
+      file_put_contents( $file, $strOut, FILE_APPEND );
    }
 }
