@@ -68,3 +68,18 @@ function membershipid_civicrm_upgrade($op, CRM_Queue_Queue $queue = NULL) {
 function membershipid_civicrm_managed(&$entities) {
   return _membershipid_civix_civicrm_managed($entities);
 }
+
+/**
+ * GKT - Implement hook to catch membership additions / changes
+ * and update the memerbship id accordingly.
+ */
+function membershipid_civicrm_post( $op, $objectName, $objectId, &$objectRef )
+{
+   if ($op == 'create' && $objectName == 'Membership') 
+   {
+	/* Test first */
+	$file = '/tmp/gktTestMembershipPlugin.log'
+	file_put_contents( $file, "Got a membership change\n", FILE_APPEND );
+
+   }
+}
