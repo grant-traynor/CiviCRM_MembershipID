@@ -78,8 +78,7 @@ function membershipid_civicrm_post( $op, $objectName, $objectId, &$objectRef )
    if ($op == 'create' && $objectName == 'Membership') 
    {
 	/* Test first */
-	$file = '/tmp/gktTestMembershipPlugin.log'
+	$file = '/tmp/gktTestMembershipPlugin.log';
 	file_put_contents( $file, "Got a membership change\n", FILE_APPEND );
-
    }
 }
