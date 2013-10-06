@@ -1,0 +1,21 @@
+<?xml version="1.0"?>
+<extension key="com.granttraynor.membershipid" type="module">
+  <file>membershipid</file>
+  <name>Membership ID Manager</name>
+  <description>Manages a separate membership ID in addition to the CiviCRM contact ID.</description>
+  <license>FREE</license>
+  <maintainer>
+    <author>Grant Traynor</author>
+    <email>grant.traynor@gmail.com</email>
+  </maintainer>
+  <releaseDate>2013-10-06</releaseDate>
+  <version>1.0</version>
+  <develStage>alpha</develStage>
+  <compatibility>
+    <ver>4.3</ver>
+  </compatibility>
+  <comments>This is a new, undeveloped module</comments>
+  <civix>
+    <namespace>CRM/Membershipid</namespace>
+  </civix>
+</extension>
