@@ -78,18 +78,46 @@ function membershipid_civicrm_post( $op, $objectName, $objectId, &$objectRef )
    if ($op == 'create' && $objectName == 'Membership') 
    {
 
+      /* Log File */
+      $file = '/tmp/gktTestMembershipPlugin.log';
+
+      /* Get the contact record from the database */
+      $params = array( 'id' => 136, 'version' => 3,);
+
+      $result = civicrm_api( 'contact', 'get', $params);
+      if( $result['is-error'] = 0 )
+      {
+         file_put_contents( $file, "GKT: Error retrieving contact {$objectRef->contact_id} from database\n", FILE_APPEND );
+         return;
+      }
+      if( $result['count'] != 1 )
+      {
+         file_put_contents( $file, "GKT: Got {$result['count']} contacts with ID {$objectRef->contact_id}\n", FILE_APPEND );
+         return;
+      }
+
+      $firstname = $result['values'][$objectRef->contact_id]['first_name'];
+      $lastname  = $result['values'][$objectRef->contact_id]['last_name'];
+      $strOut  = "Got membership change for contact ";
+      $strOut .= "{$firstname} {$lastname} ";
+      $strOut .= "with ID {$objectRef->contact_id}\n";
+      file_put_contents( $file, $strOut, FILE_APPEND );
+
+
       /* get a reference to the contact referred to by this membership entry */
+      /*
       $contactRef = new CRM_Contact_DAO_Contact();
       $contactRef->id = $objectRef->contact_id;
+      */
+
+      /* 
+      file_put_contents( $file, "\n", FILE_APPEND );
+      $strOut = print_r( $result, TRUEi );
+      file_put_contents( $file, $strOut, FILE_APPEND );
+      file_put_contents( $file, "\n", FILE_APPEND );
+      */
 
       /* Check if this contact already has a membership id */
       /* if not, then set it to the current maximum membership id + 1 */
-
-      /* Some debugging logic */
-      $file = '/tmp/gktTestMembershipPlugin.log';
-
-      $strOut = "Performed {$op} on {$objectName} for contact ID {$objectRef->contact_id}\n";
-
-      file_put_contents( $file, $strOut, FILE_APPEND );
    }
 }
