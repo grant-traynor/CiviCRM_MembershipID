@@ -78,11 +78,14 @@ function membershipid_civicrm_post( $op, $objectName, $objectId, &$objectRef )
    if ($op == 'create' && $objectName == 'Membership') 
    {
 
+      /* Debugging log */
+      $DEBUG=TRUE;
+
       /* Log File */
       $file = '/tmp/gktTestMembershipPlugin.log';
 
       /* Get the contact record from the database */
-      $params = array( 'id' => 136, 'version' => 3,);
+      $params = array( 'id' => $objectRef->contact_id, 'version' => 3,);
 
       $result = civicrm_api( 'contact', 'get', $params);
       if( $result['is-error'] = 0 )
@@ -96,28 +99,113 @@ function membershipid_civicrm_post( $op, $objectName, $objectId, &$objectRef )
          return;
       }
 
-      $firstname = $result['values'][$objectRef->contact_id]['first_name'];
-      $lastname  = $result['values'][$objectRef->contact_id]['last_name'];
-      $strOut  = "Got membership change for contact ";
-      $strOut .= "{$firstname} {$lastname} ";
-      $strOut .= "with ID {$objectRef->contact_id}\n";
-      file_put_contents( $file, $strOut, FILE_APPEND );
+      if ($DEBUG )
+      {
+         $firstname = $result['values'][$objectRef->contact_id]['first_name'];
+         $lastname  = $result['values'][$objectRef->contact_id]['last_name'];
+         $strOut  = "Got membership change for contact ";
+         $strOut .= "{$firstname} {$lastname} ";
+         $strOut .= "with ID {$objectRef->contact_id}\n";
+         file_put_contents( $file, $strOut, FILE_APPEND );
+      }
+   
+      /* First, get the table name for the custom data group "Membership_Specifics" */
+      $params = array(
+        'version' => 3,
+        'page' => 'CiviCRM',
+        'q' => 'civicrm/ajax/rest',
+        'sequential' => 1,
+        'name' => 'Membership_Specifics',
+      );
+      $membershipSpecificsGroup = civicrm_api('CustomGroup', 'get', $params);
+      $membershipSpecGroupId = $membershipSpecificsGroup['values'][0]['id'];
+      $memhershipSpecificsTable = $membershipSpecificsGroup['values'][0]['table_name']; 
 
+      /* Now get the Column Name and ID for "Membership_ID" in that table */
+      $params = array(
+        'version' => 3,
+        'page' => 'CiviCRM',
+        'q' => 'civicrm/ajax/rest',
+        'sequential' => 1,
+        'custom_group_id' => $membershipSpecGroupId,
+        'name' => 'Membership_ID',
+      );
+      $columnNames = civicrm_api('CustomField', 'get', $params);
+      $columnName = $columnNames['values'][0]['column_name'];
+      $columnId = $columnNames['values'][0]['id'];
 
-      /* get a reference to the contact referred to by this membership entry */
-      /*
-      $contactRef = new CRM_Contact_DAO_Contact();
-      $contactRef->id = $objectRef->contact_id;
-      */
-
-      /* 
-      file_put_contents( $file, "\n", FILE_APPEND );
-      $strOut = print_r( $result, TRUEi );
-      file_put_contents( $file, $strOut, FILE_APPEND );
-      file_put_contents( $file, "\n", FILE_APPEND );
-      */
+      if( $DEBUG )
+      {
+         $strOut  = "Got membershipSpecificData with  ";
+         $strOut .= "groupID {$membershipSpecGroupId} and columnName {$columnName}\n";
+         file_put_contents( $file, $strOut, FILE_APPEND );
+      }
 
       /* Check if this contact already has a membership id */
-      /* if not, then set it to the current maximum membership id + 1 */
+      $params = array(
+        'version' => 3,
+        'page' => 'CiviCRM',
+        'q' => 'civicrm/ajax/rest',
+        'sequential' => 1,
+        'entity_id' => $objectRef->contact_id,
+      );
+      $existingMembershipId = civicrm_api('CustomValue', 'get', $params);
+
+      $i = 0;
+      $membershipIdExists = FALSE;
+      while( $i <= $existingMembershipId['count'] )
+      {
+         $membershipEntry = $existingMembershipId['values'][$i];
+         $tmp = print_r( $membershipEntry, TRUE );
+         file_put_contents( $file, $tmp, FILE_APPEND );
+         if( ($membershipEntry['id'] == $columnId) && ($membershipEntry['0'] > 0) )
+         {
+            /* A membership ID already exists for this contact */
+            if( $DEBUG )
+            {
+               $strOut  = "Got existing membership ID ";
+               $strOut .= "{$membershipEntry['0']} ... moving on quietly\n";
+               file_put_contents( $file, $strOut, FILE_APPEND );
+            }
+            $membershipIdExists = TRUE;
+            return;
+         }
+         $i++;
+      }
+
+      /* Find the biggest member ID currently allocated */
+      /* NOTE: There appears to be no easy way to do this via the api. 
+               so I'm dropping back to the DAO interface until a better method
+               can be found that preserves our design goal to use the API */
+
+      $query = "SELECT max( {$columnName} ) as biggest_member_id FROM {$memhershipSpecificsTable}"; 
+      $dao = CRM_Core_DAO::executeQuery( $query ); 
+      while ( $dao->fetch( ) ) { $max_member_id = $dao->biggest_member_id; } 
+      if( $DEBUG )
+      {
+         $strOut .= "Got max membership number as {$max_member_id}\n";
+         file_put_contents( $file, $strOut, FILE_APPEND );
+      }
+
+      /* 2. Assign this number +1 to the current contact */
+      /* Note: You use the "create" function, passing in the contact ID, to set the
+               custom fields. Also, you use the syntax "custom_n" where n is the ID
+               of the custom field. This is a little strange, but hey.
+               Refer to this page : 
+
+               http://wiki.civicrm.org/confluence/display/CRMDOC/Using+Custom+Data+with+the+API */
+
+      $colname = "custom_{$columnId}";
+      $newMemberId = $max_member_id + 1;
+      $params = array('contact_id'   => $objectRef->contact_id,
+                      'version' => 3,
+                      $colname       => $newMemberId, );
+      civicrm_api('contact', 'create', $params);
+
+      if( $DEBUG )
+      {
+         $strOut .= "Assigned as {$newMemberId}\n";
+         file_put_contents( $file, $strOut, FILE_APPEND );
+      }
    }
 }
