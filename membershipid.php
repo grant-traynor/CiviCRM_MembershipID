@@ -90,12 +90,18 @@ function membershipid_civicrm_post( $op, $objectName, $objectId, &$objectRef )
       $result = civicrm_api( 'contact', 'get', $params);
       if( $result['is-error'] = 0 )
       {
-         file_put_contents( $file, "GKT: Error retrieving contact {$objectRef->contact_id} from database\n", FILE_APPEND );
+	      if( $DEBUG )
+         {
+         	file_put_contents( $file, "GKT: Error retrieving contact {$objectRef->contact_id} from database\n", FILE_APPEND );
+         }
          return;
       }
       if( $result['count'] != 1 )
       {
-         file_put_contents( $file, "GKT: Got {$result['count']} contacts with ID {$objectRef->contact_id}\n", FILE_APPEND );
+	      if( $DEBUG )
+         {
+            file_put_contents( $file, "GKT: Got {$result['count']} contacts with ID {$objectRef->contact_id}\n", FILE_APPEND );
+         }
          return;
       }
 
@@ -156,8 +162,11 @@ function membershipid_civicrm_post( $op, $objectName, $objectId, &$objectRef )
       while( $i <= $existingMembershipId['count'] )
       {
          $membershipEntry = $existingMembershipId['values'][$i];
-         $tmp = print_r( $membershipEntry, TRUE );
-         file_put_contents( $file, $tmp, FILE_APPEND );
+	      if( $DEBUG )
+         {
+            $tmp = print_r( $membershipEntry, TRUE );
+            file_put_contents( $file, $tmp, FILE_APPEND );
+         }
          if( ($membershipEntry['id'] == $columnId) && ($membershipEntry['0'] > 0) )
          {
             /* A membership ID already exists for this contact */
